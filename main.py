@@ -72,13 +72,25 @@ def hello_world():
     # # result = sts(first,second)
 
     # ####### pororo 결과 가공해서 firestore에 넣기 ######
-    doc_ref = db.collection(u'users').document(u'user01')
-    doc_ref.set({
-        u'level': 20,
-        u'money': 700,
-        u'job': "knight"
-    })
-    return 'Hello World!'
+    # doc_ref = db.collection(u'users').document(u'user01')
+    # doc_ref.set({
+    #     u'level': 20,
+    #     u'money': 700,
+    #     u'job': "knight"
+    # })
+
+    # doc_ref = db.collection(u'users').document(u'user02')
+    # doc_ref.set({
+    #     u'level': 23,
+    #     u'money': 701,
+    #     u'job': "Mage"
+    # })
+
+    users_ref = db.collection(u'users')
+    docs = users_ref.stream()
+    for doc in docs:
+        print(u'{} => {}'.format(doc.id, doc.to_dict()))
+    return 'Hello'
 
 
 if __name__ == '__main__':
