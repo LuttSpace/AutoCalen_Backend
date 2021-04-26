@@ -10,9 +10,9 @@ from firebase_admin import credentials
 from firebase_admin import firestore
 
 # Use a service account
-cred = credentials.Certificate('mykey.json')
+cred = credentials.Certificate('autocalen.json')
 firebase_admin.initialize_app(cred, {
-    'projectId' : 'autocalen'
+    'projectId' : 'autocalen-1c7f1'
 })
 
 db = firestore.client()
@@ -86,10 +86,19 @@ def hello_world():
     #     u'job': "Mage"
     # })
 
-    users_ref = db.collection(u'users')
-    docs = users_ref.stream()
-    for doc in docs:
-        print(u'{} => {}'.format(doc.id, doc.to_dict()))
+    # users_ref = db.collection(u'UserList').where(u'id',u'==',u'5NxFVmOkPhPx62Y2Xl2xWDmpSoN2').stream()
+    # for doc in users_ref:
+    #     # print(u'{} => {}'.format(doc.id, doc.to_dict()))
+    #     print(u'{}'.format(doc.id))
+
+    doc_ref = db.collection(u'UserList').document(u'5NxFVmOkPhPx62Y2Xl2xWDmpSoN2')
+    doc = doc_ref.get()
+    if doc.exists:
+        print(f'Document data')
+    else:
+        print(u'No such document!')
+
+
     return 'Hello'
 
 
@@ -101,7 +110,6 @@ if __name__ == '__main__':
 
 # with open("../img/DZcyDFu.jpg", "rb") as f:
 #     img = base64.b64encode(f.read())
-
 
 
 
