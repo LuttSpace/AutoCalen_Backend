@@ -1,13 +1,16 @@
-# -*- coding: utf-8 -*-
+#-*- coding: utf-8 -*-
 # import firebase_admin
 import json
 import base64
 import requests
+from datetime import datetime, time
 from pororo import Pororo
 from flask import Flask, request
 import firebase_admin
 from firebase_admin import credentials
 from firebase_admin import firestore
+
+
 
 # Use a service account
 cred = credentials.Certificate('autocalen.json')
@@ -79,25 +82,35 @@ def hello_world():
     #     u'job': "knight"
     # })
 
-    # doc_ref = db.collection(u'users').document(u'user02')
-    # doc_ref.set({
-    #     u'level': 23,
-    #     u'money': 701,
-    #     u'job': "Mage"
-    # })
 
-    # users_ref = db.collection(u'UserList').where(u'id',u'==',u'5NxFVmOkPhPx62Y2Xl2xWDmpSoN2').stream()
-    # for doc in users_ref:
-    #     # print(u'{} => {}'.format(doc.id, doc.to_dict()))
-    #     print(u'{}'.format(doc.id))
 
-    doc_ref = db.collection(u'UserList').document(u'5NxFVmOkPhPx62Y2Xl2xWDmpSoN2')
-    doc = doc_ref.get()
-    if doc.exists:
-        print(f'Document data')
-    else:
-        print(u'No such document!')
+    ##### user의 tag를 read
+    # collections = db.collection('UserList').document('5NxFVmOkPhPx62Y2Xl2xWDmpSoN2').collection('TagHub')
+    # print(collections) # CollectionReference
+    # for doc in collections.stream():
+    #     print(doc)  # DocumentSnapshot Object
+    #     print(u'{} => {} / {}'.format(doc.id, doc.get('color'), doc.get('name').encode('euc-kr')))
 
+    # collections = db.collection('UserList').document('5NxFVmOkPhPx62Y2Xl2xWDmpSoN2').collection('ScheduleHub')
+    # # print(collections) # CollectionReference
+    # for doc in collections.stream():
+    #     # print(doc)  # DocumentSnapshot Object
+    #     # tag = doc.get('tag')
+    #     # print(type(tag))
+    #     print(u'{} => {}'.format(doc.id, doc.get('start')))
+    #     # print(f'Document data: {doc.get('start')}')
+
+    ##### user의 schedule에 write
+    doc = db.collection('UserList').document('5NxFVmOkPhPx62Y2Xl2xWDmpSoN2').collection('ScheduleHub').document(u'testuser')
+    doc.set({
+        u'title': u'졸작회의',
+        u'isAllDay' : True,
+        u'tag' : {
+            u'color' : "Color(0xff276cce)",
+            u'name' : u"생일",
+            u'tid' : None
+        }
+    })
 
     return 'Hello'
 
