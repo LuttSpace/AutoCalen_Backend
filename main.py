@@ -84,33 +84,33 @@ def hello_world():
 
 
 
-    ##### user의 tag를 read
+    # ##### user의 tag를 read
     # collections = db.collection('UserList').document('5NxFVmOkPhPx62Y2Xl2xWDmpSoN2').collection('TagHub')
     # print(collections) # CollectionReference
     # for doc in collections.stream():
     #     print(doc)  # DocumentSnapshot Object
-    #     print(u'{} => {} / {}'.format(doc.id, doc.get('color'), doc.get('name').encode('euc-kr')))
+    #     print(u'{} => {} / {}'.format(doc.id, doc.get('color'), doc.get('name')))
 
-    # collections = db.collection('UserList').document('5NxFVmOkPhPx62Y2Xl2xWDmpSoN2').collection('ScheduleHub')
-    # # print(collections) # CollectionReference
-    # for doc in collections.stream():
-    #     # print(doc)  # DocumentSnapshot Object
-    #     # tag = doc.get('tag')
-    #     # print(type(tag))
-    #     print(u'{} => {}'.format(doc.id, doc.get('start')))
-    #     # print(f'Document data: {doc.get('start')}')
+    collections = db.collection('UserList').document('5NxFVmOkPhPx62Y2Xl2xWDmpSoN2').collection('ScheduleHub')
+    # print(collections) # CollectionReference
+    for doc in collections.stream():
+        # print(doc)  # DocumentSnapshot Object
+        # tag = doc.get('tag')
+        # print(type(tag))
+        print(u'{} => {}'.format(doc.id, doc.to_dict()))
+        # print(f'Document data: {doc.get('start')}')
 
-    ##### user의 schedule에 write
-    doc = db.collection('UserList').document('5NxFVmOkPhPx62Y2Xl2xWDmpSoN2').collection('ScheduleHub').document(u'testuser')
-    doc.set({
-        u'title': u'졸작회의',
-        u'isAllDay' : True,
-        u'tag' : {
-            u'color' : "Color(0xff276cce)",
-            u'name' : u"생일",
-            u'tid' : None
-        }
-    })
+    # ##### user의 schedule에 write
+    # doc = db.collection('UserList').document('5NxFVmOkPhPx62Y2Xl2xWDmpSoN2').collection('ScheduleHub').document(u'testuser')
+    # doc.set({
+    #     u'title': u'졸작회의',
+    #     u'isAllDay' : True,
+    #     u'tag' : {
+    #         u'color' : "Color(0xff276cce)",
+    #         u'name' : u"생일",
+    #         u'tid' : None
+    #     }
+    # })
 
     return 'Hello'
 
