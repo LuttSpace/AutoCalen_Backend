@@ -1,4 +1,5 @@
 #-*- coding: utf-8 -*-
+import os
 import json
 import base64
 import requests
@@ -9,7 +10,16 @@ import firebase_admin
 from firebase_admin import credentials
 from firebase_admin import firestore
 
-# Use a service account
+##### naverocr 연결 #####
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+# print(BASE_DIR)
+secret_file = os.path.join(BASE_DIR, "ncpocr.json")
+# print(secret_file)
+with open(secret_file) as f:
+    secrets = json.loads(f.read())
+    # print(secrets)
+
+##### firebase 연결 #####
 cred = credentials.Certificate('autocalen.json')
 firebase_admin.initialize_app(cred, {
     'projectId' : 'autocalen-1c7f1'
@@ -17,13 +27,13 @@ firebase_admin.initialize_app(cred, {
 
 db = firestore.client()
 
-######## naver ocr 호출 ########
+##### naver ocr 호출 #####
 def get_ocr_data(_url):
     # 본인의 APIGW Invoke URL로 치환
-    URL = "https://bd93513273b346afb64b27d4f20e7ab2.apigw.ntruss.com/custom/v1/7789/c7b68ac37f364473e922936708e7f43c293dd07b295171566c07ff5fe024fab9/general"
+    URL = secrets["APIGWInvokeURL"]
         
     # 본인의 Secret Key로 치환
-    KEY = "YWd6d1dyRktDamdEc2dGRGpoa0dEQXVFVkZzSE1tY2g="
+    KEY = secrets["secretkey"]
         
     headers = {
         "Content-Type": "application/json",
