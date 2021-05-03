@@ -1,5 +1,4 @@
 #-*- coding: utf-8 -*-
-# import firebase_admin
 import json
 import base64
 import requests
@@ -10,8 +9,6 @@ import firebase_admin
 from firebase_admin import credentials
 from firebase_admin import firestore
 
-
-
 # Use a service account
 cred = credentials.Certificate('autocalen.json')
 firebase_admin.initialize_app(cred, {
@@ -20,87 +17,77 @@ firebase_admin.initialize_app(cred, {
 
 db = firestore.client()
 
-# ######## naver ocr 호출 ########
-# def get_ocr_data(_url):
-#     # 본인의 APIGW Invoke URL로 치환
-#     URL = "https://bd93513273b346afb64b27d4f20e7ab2.apigw.ntruss.com/custom/v1/7789/c7b68ac37f364473e922936708e7f43c293dd07b295171566c07ff5fe024fab9/general"
+######## naver ocr 호출 ########
+def get_ocr_data(_url):
+    # 본인의 APIGW Invoke URL로 치환
+    URL = "https://bd93513273b346afb64b27d4f20e7ab2.apigw.ntruss.com/custom/v1/7789/c7b68ac37f364473e922936708e7f43c293dd07b295171566c07ff5fe024fab9/general"
         
-#     # 본인의 Secret Key로 치환
-#     KEY = "YWd6d1dyRktDamdEc2dGRGpoa0dEQXVFVkZzSE1tY2g="
+    # 본인의 Secret Key로 치환
+    KEY = "YWd6d1dyRktDamdEc2dGRGpoa0dEQXVFVkZzSE1tY2g="
         
-#     headers = {
-#         "Content-Type": "application/json",
-#         "X-OCR-SECRET": KEY
-#     }
+    headers = {
+        "Content-Type": "application/json",
+        "X-OCR-SECRET": KEY
+    }
         
-#     data = {
-#         "lang": "ko",
-#         "version": "V1",
-#         "requestId": "sample_id", # 요청을 구분하기 위한 ID, 사용자가 정의
-#         "timestamp": 0, # 현재 시간값
-#         "resultType": "string",
-#         "images": [
-#             {
-#                 "name": "sample_image",
-#                 "format": "jpg",
-#                 "data": None,
-#                 "url" : _url #받은 url로 치환
-#             }
-#         ]
-#     }
-#     # data = json.dumps(data)
-#     result = requests.post(URL, data=json.dumps(data), headers=headers)
-#     result = result.json()
-#     # print("{}\n".format(json.dumps(result, sort_keys=True, indent=2, ensure_ascii=False)))
-#     result = json.dumps(result,sort_keys=True, indent=2, ensure_ascii=False)
-    
-#     # res = json.loads(response)
-#     # print("[OCR] output:\n{}\n".format(json.dumps(response, sort_keys=True, indent=2)))
-#     # response = json.dumps(response).decode('utf-8')
-#     return result
-
-#     #  output = kakao_ocr(image_path, appkey).json()
-#     #  print("[OCR] output:\n{}\n".format(json.dumps(output, sort_keys=True, indent=2)))
+    data = {
+        "lang": "ko",
+        "version": "V1",
+        "requestId": "sample_id", # 요청을 구분하기 위한 ID, 사용자가 정의
+        "timestamp": 0, # 현재 시간값
+        "resultType": "string",
+        "images": [
+            {
+                "name": "sample_image",
+                "format": "jpg",
+                "data": None,
+                "url" : _url #받은 url로 치환
+            }
+        ]
+    }
+    result = requests.post(URL, data=json.dumps(data), headers=headers).json() #딕셔너리
+    result = result["images"][0]["fields"] #list>dict>list
+    result = list(map(lambda e : e["inferText"], result))
+    # result = json.dumps(result,sort_keys=True, indent=2, ensure_ascii=False)
+    return result
 
 app = Flask(__name__)
 
 @app.route('/', methods=["GET"])
 def hello_world():
-    # ######## flutter 앱으로부터 이미지 url 받기 ########
-    # _url = request.args.get("_url", "https://i.imgur.com/DZcyDFu.jpg")
-    # result = get_ocr_data(_url)
-    
-    # ####### ocr 결과 가공해서 pororo 호출 #######
-    # # sts = Pororo(task="similarity", lang="ko")
-    # # result = sts(first,second)
+    ##### flutter 앱으로부터 이미지 url 받기 #####
+    _url = request.args.get("_url", "https://i.imgur.com/EJ0mOeK.jpg")
+    _id = request.args.get("_id", "5NxFVmOkPhPx62Y2Xl2xWDmpSoN2")
+    year = request.args.get("year","")
+    month = request.args.get("month","")
+    day = request.args.get("day","")
+    # print('{} , {}\n{}, {}, {}'.format(_url,_id,year,month,day))
 
-    # ####### pororo 결과 가공해서 firestore에 넣기 ######
-    # doc_ref = db.collection(u'users').document(u'user01')
-    # doc_ref.set({
-    #     u'level': 20,
-    #     u'money': 700,
-    #     u'job': "knight"
-    # })
-
-
-
-    # ##### user의 tag를 read
-    # collections = db.collection('UserList').document('5NxFVmOkPhPx62Y2Xl2xWDmpSoN2').collection('TagHub')
-    # print(collections) # CollectionReference
-    # for doc in collections.stream():
-    #     print(doc)  # DocumentSnapshot Object
-    #     print(u'{} => {} / {}'.format(doc.id, doc.get('color'), doc.get('name')))
-
-    collections = db.collection('UserList').document('5NxFVmOkPhPx62Y2Xl2xWDmpSoN2').collection('ScheduleHub')
+    ##### user의 tag를 read #####
+    tagList = []
+    collections = db.collection('UserList').document(_id).collection('TagHub')
     # print(collections) # CollectionReference
     for doc in collections.stream():
         # print(doc)  # DocumentSnapshot Object
-        # tag = doc.get('tag')
-        # print(type(tag))
-        print(u'{} => {}'.format(doc.id, doc.to_dict()))
-        # print(f'Document data: {doc.get('start')}')
+        # print(u'{} => {} / {}'.format(doc.id, doc.get('color'), doc.get('name')))
+        # print(u'{} => {}'.format(doc.id, doc.to_dict()))
+        tagList.append(doc.get('name'))
+    # print(tagList)
 
-    # ##### user의 schedule에 write
+    ##### ocr 호출 #####
+    ocr_result = get_ocr_data(_url)
+    print(ocr_result)   #list
+
+    ##### ocr 결과 가공해서 pororo 호출 #####
+    zsl = Pororo(task="zero-topic", lang="ko")
+    zsl_result = zsl(ocr_result[0],tagList)
+    print(zsl_result)
+
+    ##### pororo 결과 가공해서 최적의 tag search#####
+    max_tag = max(zsl_result.keys(), key=(lambda k:zsl_result[k]))
+    print(max_tag)
+
+    ##### user의 schedule에 write #####
     # doc = db.collection('UserList').document('5NxFVmOkPhPx62Y2Xl2xWDmpSoN2').collection('ScheduleHub').document(u'testuser')
     # doc.set({
     #     u'title': u'졸작회의',
@@ -118,23 +105,16 @@ def hello_world():
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
 
-# default_app = firebase_admin.initialize_app()
-# export GOOGLE_APPLICATION_CREDENTIALS="/home/user/Downloads/service-account-file.json"
-
-# with open("../img/DZcyDFu.jpg", "rb") as f:
-#     img = base64.b64encode(f.read())
 
 
-
-
-####### ocr 결과 가공해서 pororo 호출 #######
-# sts = Pororo(task="similarity", lang="ko")
-# result = sts(first,second)
-
-####### pororo 결과 가공해서 firestore에 넣기 ######
-
-
-
+    # collections = db.collection('UserList').document('5NxFVmOkPhPx62Y2Xl2xWDmpSoN2').collection('ScheduleHub')
+    # # print(collections) # CollectionReference
+    # for doc in collections.stream():
+    #     # print(doc)  # DocumentSnapshot Object
+    #     # tag = doc.get('tag')
+    #     # print(type(tag))
+    #     print(u'{} => {}'.format(doc.id, doc.to_dict()))
+    #     # print(f'Document data: {doc.get('start')}')
 """
 A sample Hello World server.
 """
