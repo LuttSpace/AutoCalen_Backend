@@ -3,7 +3,7 @@ import os
 import json
 import base64
 import requests
-from datetime import datetime, time
+import datetime
 from pororo import Pororo
 from flask import Flask, request
 import firebase_admin
@@ -68,22 +68,27 @@ def hello_world():
     ##### flutter 앱으로부터 이미지 url 받기 #####
     _url = request.args.get("_url", "https://i.imgur.com/EJ0mOeK.jpg")
     _id = request.args.get("_id", "5NxFVmOkPhPx62Y2Xl2xWDmpSoN2")
-    year = request.args.get("year","")
-    month = request.args.get("month","")
-    day = request.args.get("day","")
+    year = int(request.args.get("year",""))
+    month = int(request.args.get("month",""))
+    day = int(request.args.get("day",""))
     # print('{} , {}\n{}, {}, {}'.format(_url,_id,year,month,day))
 
     ##### user의 tag를 read #####
     tagList = []
+    tagInfo = {}
     collections = db.collection('UserList').document(_id).collection('TagHub')
     # print(collections) # CollectionReference
     for doc in collections.stream():
         # print(doc)  # DocumentSnapshot Object
         # print(u'{} => {} / {}'.format(doc.id, doc.get('color'), doc.get('name')))
         # print(u'{} => {}'.format(doc.id, doc.to_dict()))
-        tagList.append(doc.get('name'))
-    # print(tagList)
-
+        name = doc.get('name')
+        color = doc.get('color')
+        tagList.append(name)
+        tagInfo[name] = { "tagid" : doc.id, "tagcolor" : color}
+    print(tagList)
+    print(tagInfo)
+    
     ##### ocr 호출 #####
     ocr_result = get_ocr_data(_url)
     print(ocr_result)   #list
@@ -93,21 +98,35 @@ def hello_world():
     zsl_result = zsl(ocr_result[0],tagList)
     print(zsl_result)
 
-    ##### pororo 결과 가공해서 최적의 tag search#####
+    ##### pororo 결과 가공해서 최적의 tag search #####
     max_tag = max(zsl_result.keys(), key=(lambda k:zsl_result[k]))
     print(max_tag)
+    # print(tagInfo[max_tag])
+    # print(type(tagInfo[max_tag]['tagcolor']))
 
     ##### user의 schedule에 write #####
-    # doc = db.collection('UserList').document('5NxFVmOkPhPx62Y2Xl2xWDmpSoN2').collection('ScheduleHub').document(u'testuser')
-    # doc.set({
-    #     u'title': u'졸작회의',
-    #     u'isAllDay' : True,
-    #     u'tag' : {
-    #         u'color' : "Color(0xff276cce)",
-    #         u'name' : u"생일",
-    #         u'tid' : None
-    #     }
-    # })
+    ##### isAllDay 결정 #####
+    isAllDay = True
+    if day != -1:
+        isAllDay = False
+    ##### 날짜 시간 결정 #####
+    ##### ocr 결과에 따라서 time 로직 추가 필요
+    start = datetime.datetime(year, month, day, 13, 0, 0)
+    end = datetime.datetime(year, month, day, 22, 0, 0)
+    doc = db.collection('UserList').document(_id).collection('ScheduleHub').document()
+    doc.set({
+        # u'title': u'졸작회의',  # pororo결과 넣기..
+        u'title': ocr_result[0],  # pororo결과 넣기..
+        u'isAllDay' : isAllDay, #day -1인경우
+        u'tag' : {
+            u'color' : tagInfo[max_tag]['tagcolor'],
+            u'name' : max_tag,
+            u'tid' : tagInfo[max_tag]['tagid']
+        },
+        u'start' : start - datetime.timedelta(hours=9),
+        u'end' : end - datetime.timedelta(hours=9),
+        u'memo' : None,
+    })
 
     return 'Hello'
 
@@ -125,6 +144,8 @@ if __name__ == '__main__':
     #     # print(type(tag))
     #     print(u'{} => {}'.format(doc.id, doc.to_dict()))
     #     # print(f'Document data: {doc.get('start')}')
+
+
 """
 A sample Hello World server.
 """
@@ -237,13 +258,3 @@ A sample Hello World server.
 
 # # # with open("../img/DZcyDFu.jpg", "rb") as f:
 # # #     img = base64.b64encode(f.read())
-
-
-
-
-
-# ####### ocr 결과 가공해서 pororo 호출 #######
-# # sts = Pororo(task="similarity", lang="ko")
-# # result = sts(first,second)
-
-# ####### pororo 결과 가공해서 firestore에 넣기 ######
