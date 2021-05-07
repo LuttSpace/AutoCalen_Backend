@@ -65,7 +65,9 @@ def get_ocr_data(_url):
 
 
 
-def arranging(input, tags):
+def arranging(input, tags, year, month, day):
+  
+  date = str(year)+str(month)+str(day)
   # 빈칸 재 할당
   one_input = "".join(input)
   print(one_input)
@@ -80,7 +82,7 @@ def arranging(input, tags):
   ner_results = ner(one_input,apply_wsd=True)
   arranged_ner_results={}
   temp=""
-  date=''
+#   date=''
   sche_results={}
   for result in ner_results:
     if result[1] == 'DATE': # 사진에 date가 있을 때
@@ -92,7 +94,7 @@ def arranging(input, tags):
         date = result[0]
     else: # 해당 단어가 date가 아님
       print(result)
-      if date=='': date= 'url date' # 사진에 date가 없을 때
+      if date=='': date= date # 사진에 date가 없을 때
       if result[1] == 'TIME':
         sche_results[temp]=result[0]
         print(sche_results)
@@ -119,12 +121,15 @@ app = Flask(__name__)
 
 @app.route('/', methods=["GET"])
 def hello_world():
+    _year = datetime.datetime.today().year        # 현재 연도 가져오기
+    _month = datetime.datetime.today().month      # 현재 월 가져오기  
+    _day = datetime.datetime.today().day 
     ##### flutter 앱으로부터 이미지 url 받기 #####
     _url = request.args.get("_url", "https://i.imgur.com/EJ0mOeK.jpg")
     _id = request.args.get("_id", "5NxFVmOkPhPx62Y2Xl2xWDmpSoN2")
-    year = int(request.args.get("year","2021"))
-    month = int(request.args.get("month",""))
-    day = int(request.args.get("day",""))
+    year = int(request.args.get("year",_year))
+    month = int(request.args.get("month",_month))
+    day = int(request.args.get("day",_day))
     # print('{} , {}\n{}, {}, {}'.format(_url,_id,year,month,day))
 
     ##### user의 tag를 read #####
@@ -147,7 +152,7 @@ def hello_world():
     ocr_result = get_ocr_data(_url)
     print(ocr_result)   #list
     print(spacing("".join(ocr_result)))
-    arranging(ocr_result, tagList)
+    arranging(ocr_result, tagList, year, month, day)
 
     ##### ocr 결과 가공해서 pororo 호출 #####
     # ner = Pororo(task="ner", lang="ko")
