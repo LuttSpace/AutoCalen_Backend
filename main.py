@@ -5,6 +5,7 @@ import json
 import base64
 import requests
 import datetime
+import re
 from pororo import Pororo
 from flask import Flask, request
 import firebase_admin
@@ -44,7 +45,7 @@ def get_ocr_data(_url):
         
     data = {
         "lang": "ko",
-        "version": "V1",
+        "version": "V2",
         "requestId": "sample_id", # 요청을 구분하기 위한 ID, 사용자가 정의
         "timestamp": 0, # 현재 시간값
         "resultType": "string",
@@ -58,6 +59,7 @@ def get_ocr_data(_url):
         ]
     }
     result = requests.post(URL, data=json.dumps(data), headers=headers).json() #딕셔너리
+    # print(result)
     result = result["images"][0]["fields"] #list>dict>list
     result = list(map(lambda e : e["inferText"], result))
     # result = json.dumps(result,sort_keys=True, indent=2, ensure_ascii=False)
@@ -67,42 +69,47 @@ def get_ocr_data(_url):
 
 def arranging(input, tags, year, month, day):
   
-  date = str(year)+str(month)+str(day)
-  # 빈칸 재 할당
+  _date = str(year)+str(month)+str(day)
+  # one_input = '5월 7일 병원 10시 회의 5시 5월 11일 회의 2시 반'
+  # # 빈칸 재 할당
   one_input = "".join(input)
+  print('before spacing one_input : {}'.format(one_input))
+  one_input = spacing(one_input)
+  # print(type(one_input))
+  print('after spacing one_input : {}'.format(one_input))
+  one_input = re.sub(r'(\d{1,2})/(\d{1,2})', '\\1월 \\2일', one_input)  # 0/0 형태의 날짜를 0월 0일로 변경
   print(one_input)
-  one_input=spacing(one_input)
-  print(type(one_input))
-  print(one_input)
-
   ner = Pororo(task="ner", lang="ko")
   zsl = Pororo(task="zero-topic", lang="ko")
+  # one_input = "5월9일병원10시반5월11일회의2시15분" #('5월9일', 'DATE'), ('병원10시반', 'TIME'), ('5월11일', 'DATE'), ('회의2시15분', 'TIME')]
   # ner
   # date처리
   ner_results = ner(one_input,apply_wsd=True)
+  print('ner_result : {}'.format(ner_results))
+
   arranged_ner_results={}
   temp=""
-#   date=''
+  date=''
   sche_results={}
-  for result in ner_results:
+  for result in ner_results:  #result는 tuple
     if result[1] == 'DATE': # 사진에 date가 있을 때
       print(result)
-      if date=='': date= result[0] # 처음 나온 date
+      if date=='': date = result[0] # 처음 나온 date
       else: # 처음 나온 date가 아님
         arranged_ner_results[date]=sche_results
         sche_results={}
         date = result[0]
     else: # 해당 단어가 date가 아님
       print(result)
-      if date=='': date= date # 사진에 date가 없을 때
-      if result[1] == 'TIME':
+      if date=='': date= _date # 사진에 date가 없을 때
+      if result[1] == 'TIME' or result[1] == 'QUANTITY':
         sche_results[temp]=result[0]
         print(sche_results)
         temp=""
       else :
          temp+=result[0]
     arranged_ner_results[date]=sche_results
-  print(arranged_ner_results)
+  print('arranged_ner_results : {}'.format(arranged_ner_results))
   
   #zsl
   zsled_results={}
@@ -115,15 +122,17 @@ def arranging(input, tags, year, month, day):
       zsl_results[sche]=sorted(zsl_result.items(),key=(lambda x:x[1]),reverse=True)[0][0]
       print(zsl_results)
     zsled_results[date_box[0]]=zsl_results
-  print(zsled_results)
+  print('zsled_results : {}'.format(zsled_results))
 
 app = Flask(__name__)
 
+_year = datetime.datetime.today().year        # 현재 연도 가져오기
+_month = datetime.datetime.today().month      # 현재 월 가져오기  
+_day = datetime.datetime.today().day
+
 @app.route('/', methods=["GET"])
 def hello_world():
-    _year = datetime.datetime.today().year        # 현재 연도 가져오기
-    _month = datetime.datetime.today().month      # 현재 월 가져오기  
-    _day = datetime.datetime.today().day 
+
     ##### flutter 앱으로부터 이미지 url 받기 #####
     _url = request.args.get("_url", "https://i.imgur.com/EJ0mOeK.jpg")
     _id = request.args.get("_id", "5NxFVmOkPhPx62Y2Xl2xWDmpSoN2")
@@ -145,13 +154,14 @@ def hello_world():
         color = doc.get('color')
         tagList.append(name)
         tagInfo[name] = { "tagid" : doc.id, "tagcolor" : color}
-    print(tagList)
-    print(tagInfo)
+    print('tagList : {}'.format(tagList))
+    print('tagInfo : {}'.format(tagInfo))
     
     ##### ocr 호출 #####
     ocr_result = get_ocr_data(_url)
-    print(ocr_result)   #list
-    print(spacing("".join(ocr_result)))
+    print('ocr_result : {}'.format(ocr_result))   #list
+    # print(spacing("".join(ocr_result)))
+    # ocr_result = ['5/7', '병원', '10시', '회의', '5시', '5/11', '회의', '2시']
     arranging(ocr_result, tagList, year, month, day)
 
     ##### ocr 결과 가공해서 pororo 호출 #####
