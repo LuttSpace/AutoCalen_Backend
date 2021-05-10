@@ -67,9 +67,10 @@ def get_ocr_data(_url):
 
 
 
-def arranging(input, tags, year, month, day):
+def arranging(input, tags, date_list):
   
-  _date = str(year)+str(month)+str(day)
+  # _date = str(year)+str(month)+str(day)
+  _date = ".".join(date_list)
   # one_input = '5월 7일 병원 10시 회의 5시 5월 11일 회의 2시 반'
   # # 빈칸 재 할당
   one_input = "".join(input)
@@ -78,51 +79,68 @@ def arranging(input, tags, year, month, day):
   # print(type(one_input))
   print('after spacing one_input : {}'.format(one_input))
   one_input = re.sub(r'(\d{1,2})/(\d{1,2})', '\\1월 \\2일', one_input)  # 0/0 형태의 날짜를 0월 0일로 변경
-  print(one_input)
+  print('switch to 월일 : {}'.format(one_input))
   ner = Pororo(task="ner", lang="ko")
   zsl = Pororo(task="zero-topic", lang="ko")
   # one_input = "5월9일병원10시반5월11일회의2시15분" #('5월9일', 'DATE'), ('병원10시반', 'TIME'), ('5월11일', 'DATE'), ('회의2시15분', 'TIME')]
   # ner
   # date처리
+ 
   ner_results = ner(one_input,apply_wsd=True)
   print('ner_result : {}'.format(ner_results))
 
   arranged_ner_results={}
   temp=""
   date=''
-  sche_results={}
+  sche_results = {}
   for result in ner_results:  #result는 tuple
     if result[1] == 'DATE': # 사진에 date가 있을 때
       print(result)
-      if date=='': date = result[0] # 처음 나온 date
+      if date =='':
+        # m = result[0][result[0].find('월')-1]
+        # d = result[0][result[0].find('일')-1]
+        temp_date = result[0].replace("일","")   #"일" 없애기
+        temp_date = re.sub('월','.',temp_date)
+        temp_date = temp_date.replace(" ","") # 빈칸 없애기
+        # print(temp_date)
+        date = date_list[0]+'.'+temp_date # 처음 나온 date  ###### 월일 형식 동일형식 문자열로 변경 필요
+        # date = result[0]
       else: # 처음 나온 date가 아님
-        arranged_ner_results[date]=sche_results
+        arranged_ner_results[date] = sche_results
         sche_results={}
-        date = result[0]
+        # m = result[0][result[0].find('월')-1]
+        # d = result[0][result[0].find('일')-1]
+        temp_date = result[0].replace("일","")   #"일" 없애기
+        temp_date = re.sub('월','.',temp_date)
+        temp_date = temp_date.replace(" ","")  # 빈칸 없애기
+        # print(temp_date)
+        date = date_list[0]+'.'+temp_date 
+        # date = result[0]  ###### 월일 형식 동일형식 문자열로 변경 필요
     else: # 해당 단어가 date가 아님
       print(result)
-      if date=='': date= _date # 사진에 date가 없을 때
+      if date=='': date = _date # 사진에 date가 없을 때
       if result[1] == 'TIME' or result[1] == 'QUANTITY':
-        sche_results[temp]=result[0]
+        sche_results[temp] = result[0]
         print(sche_results)
         temp=""
       else :
          temp+=result[0]
-    arranged_ner_results[date]=sche_results
+    arranged_ner_results[date] = sche_results
   print('arranged_ner_results : {}'.format(arranged_ner_results))
   
   #zsl
-  zsled_results={}
+  zsled_results = {}
   for date_box in arranged_ner_results.items():
     print(date_box)
-    zsl_results={}
+    zsl_results = {}
     for sche in date_box[1]:
       print(sche)
-      zsl_result=zsl(sche,tags)
-      zsl_results[sche]=sorted(zsl_result.items(),key=(lambda x:x[1]),reverse=True)[0][0]
+      zsl_result = zsl(sche,tags)
+      zsl_results[sche] = sorted(zsl_result.items(),key=(lambda x:x[1]),reverse=True)[0][0]
       print(zsl_results)
-    zsled_results[date_box[0]]=zsl_results
+    zsled_results[date_box[0]] = zsl_results
   print('zsled_results : {}'.format(zsled_results))
+  return arranged_ner_results, zsled_results
 
 app = Flask(__name__)
 
@@ -160,44 +178,40 @@ def hello_world():
     ##### ocr 호출 #####
     ocr_result = get_ocr_data(_url)
     print('ocr_result : {}'.format(ocr_result))   #list
-    # print(spacing("".join(ocr_result)))
-    # ocr_result = ['5/7', '병원', '10시', '회의', '5시', '5/11', '회의', '2시']
-    arranging(ocr_result, tagList, year, month, day)
+    date_list = [str(year),str(month),str(day)]
+    ner_result, zsl_result = arranging(ocr_result, tagList, date_list)
 
-    ##### ocr 결과 가공해서 pororo 호출 #####
-    # ner = Pororo(task="ner", lang="ko")
-    # zsl = Pororo(task="zero-topic", lang="ko")
-    # zsl_result = zsl(ocr_result[0],tagList)
-    # print(zsl_result)
+    for index, (key, value) in enumerate(ner_result.items()): #key는 date, value는 딕셔너리
+      doc_date = key
+      print(doc_date)
+      doc_date = doc_date.split(".")
+      print(doc_date)
+      doc_year = int(doc_date[0])
+      doc_month = int(doc_date[1])
+      doc_day = int(doc_date[2])
+      for inindex, (inkey, invalue) in enumerate(value.items()) : #inkey는 일정, invalue는 시간
+        print('{} : {}'.format(inkey, invalue))
+        start = datetime.datetime(doc_year, doc_month, doc_day, 0, 0, 0) #시간 넣어주기
+        end = datetime.datetime(doc_year, doc_month, doc_day, 23, 59, 59)
+        max_tag = zsl_result[key][inkey] #최적 tag
+        doc = db.collection('UserList').document(_id).collection('ScheduleHub').document()
+        doc.set({
+            # u'title': inkey+' '+invalue,  # pororo결과 넣기..
+            u'title': inkey+' '+invalue,  # pororo결과 넣기..
+            u'isAllDay' : True,
+            u'tag' : {
+                u'color' : tagInfo[max_tag]['tagcolor'],
+                u'name' : max_tag,
+                u'tid' : tagInfo[max_tag]['tagid']
+            },
+            u'start' : start - datetime.timedelta(hours=9),
+            u'end' : end - datetime.timedelta(hours=9),
+            u'memo' : None,
+        })
 
-    # ##### pororo 결과 가공해서 최적의 tag search #####
-    # max_tag = max(zsl_result.keys(), key=(lambda k:zsl_result[k]))
-    # print(max_tag)
-    # # print(tagInfo[max_tag])
 
-    ##### user의 schedule에 write #####
-    ##### isAllDay 결정 #####
-    # isAllDay = True
-    # if day != -1:
-    #     isAllDay = False
-    # ##### 날짜 시간 결정 #####
-    # ##### ocr 결과에 따라서 time 로직 추가 필요!!!!!!
-    # start = datetime.datetime(year, month, day, 13, 0, 0)
-    # end = datetime.datetime(year, month, day, 22, 0, 0)
-    # doc = db.collection('UserList').document(_id).collection('ScheduleHub').document()
-    # doc.set({
-    #     # u'title': u'졸작회의',  # pororo결과 넣기..
-    #     u'title': ocr_result[0],  # pororo결과 넣기..
-    #     u'isAllDay' : isAllDay, #day -1인경우
-    #     u'tag' : {
-    #         u'color' : tagInfo[max_tag]['tagcolor'],
-    #         u'name' : max_tag,
-    #         u'tid' : tagInfo[max_tag]['tagid']
-    #     },
-    #     u'start' : start - datetime.timedelta(hours=9),
-    #     u'end' : end - datetime.timedelta(hours=9),
-    #     u'memo' : None,
-    # })
+
+
 
     return 'Hello'
 
