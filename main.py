@@ -207,6 +207,7 @@ def hello_world():
             u'start' : start - datetime.timedelta(hours=9),
             u'end' : end - datetime.timedelta(hours=9),
             u'memo' : None,
+            u'needAlarm' : True
         })
 
 
