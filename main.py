@@ -412,7 +412,7 @@ def hello_world():
     # print('tag_info : {}'.format(tag_info))
     
     ##### ocr 호출 #####
-    # ocr_result = get_ocr_data(_url)
+    ocr_result = get_ocr_data(_url)
     # print('ocr_result : {}'.format(ocr_result))   #list
     # ocr_result = ['졸작', '회의', '4:', '30', 'PM', '운동', '5pm']
     # ocr_result = ['5/28', '회의', '10시', '병원', '2pm', '5/29', '수영', '4:30pm', '강의', '6시pm', '술약속', '9시']
