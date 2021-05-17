@@ -11,7 +11,6 @@ from flask import Flask, request
 import firebase_admin
 from firebase_admin import credentials
 from firebase_admin import firestore
-# from pykospacing import spacing
 
 ##### naverocr 연결 #####
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -58,14 +57,6 @@ def get_ocr_data(_url):
             }
         ]
     }
-    # result = requests.post(URL, data=json.dumps(data), headers=headers).json() #딕셔너리
-    # # print(result)
-    # result = result["images"][0]["fields"] #list>dict>list
-    # # print(result)
-    # result = list(map(lambda e : e["inferText"], result))
-    # print(result)
-    # # result = json.dumps(result,sort_keys=True, indent=2, ensure_ascii=False)
-    # return result
 
     ## new approach
     results_list = []
@@ -79,18 +70,11 @@ def get_ocr_data(_url):
         result_list.append(e["inferText"])
         results_list.append(result_list)
         result_list = []
-    print('ocr_result : {}'.format(results_list))
+    # print('ocr_result : {}'.format(results_list))
     return results_list
 
 
 def spacing_data(input) :
-  # one_input = "".join(input[i]) # 하나로 합치기
-  # one_input = re.sub(r'(\d{1,2})/(\d{1,2})', '\\1월 \\2일', one_input)
-  # print('transfer date(before spacing) : {}'.format(one_input))
-  # # ####### 이부분에..시간 바꿔야할 듯..
-  # one_input = spacing(one_input)
-  # print('after spacing : {}'.format(one_input))
-  # input[i] = one_input
 
   ##### new approach
   ### 오윈 공백 제거
@@ -169,95 +153,63 @@ def spacing_data(input) :
     else: #필터링 안된 time
       time_list.append('')
     input[i] = one_input
-  print('spacing_result with change date : {}'.format(input))
-  print('time_list : {}'.format(time_list))
+  # print('spacing_result with change date : {}'.format(input))
+  # print('time_list : {}'.format(time_list))
   return input, time_list
 
-  ############################
-  # # 빈칸 재 할당
-  # one_input = "".join(input)
-  # print('before spacing one_input : {}'.format(one_input))
-  # one_input = re.sub(r'(\d{1,2})/(\d{1,2})', '\\1월 \\2일', one_input)
-  # one_input = one_input.replace(" ","")
-  # print('switch to 월일 : {}'.format(one_input))
-
-  # one_input = "6월1일병원9시점심약속1pm.6월2일운동3:30pm회의5시pm수영8시술약속9pm."
-  # one_input = spacing(one_input)
-  # # print(type(one_input))
-  # print('after spacing one_input : {}'.format(one_input))
-  # # one_input = re.sub(r'(\d{1,2})/(\d{1,2})', '\\1월 \\2일', one_input)  # 0/0 형태의 날짜를 0월 0일로 변경
-  # # print('switch to 월일 : {}'.format(one_input))
-  # return one_input
 
 def doing_ner(input, date_list):
   # _date = str(year)+str(month)+str(day)
   _date = ".".join(date_list)
 
-  # # one_input = '5월 7일 병원 10시 회의 5시 5월 11일 회의 2시 반'
-  # # # 빈칸 재 할당
-  # one_input = "".join(input)
-  # print('before spacing one_input : {}'.format(one_input))
-  # one_input = spacing(one_input)
-  # # print(type(one_input))
-  # print('after spacing one_input : {}'.format(one_input))
-  # one_input = re.sub(r'(\d{1,2})/(\d{1,2})', '\\1월 \\2일', one_input)  # 0/0 형태의 날짜를 0월 0일로 변경
-  # print('switch to 월일 : {}'.format(one_input))
-
-  # one_input = "5월9일병원10시반5월11일회의2시15분" #('5월9일', 'DATE'), ('병원10시반', 'TIME'), ('5월11일', 'DATE'), ('회의2시15분', 'TIME')]
-  # ner
-  # date처리
-  # ner_results = ner(one_input,apply_wsd=True)
-  # print('ner_result : {}'.format(ner_results))
-
-  # one_input = ""
-  # for i in input:
-  #   one_input = one_input+i+"  "
-  # print('one_input: {}'.format(one_input))
-  # ner_results = ner(one_input,apply_wsd=True)
-  # print('ner_result : {}'.format(ner_results))
 
   ner_results = []
   for i in input:
     one_input = ner(i,apply_wsd=True)
     ner_results.append(one_input)
-  print('ner_result : {}'.format(ner_results)) # 2차원 배열
+  # print('ner_result : {}'.format(ner_results)) # 2차원 배열
+
   
-  ##### 아침, 점심, 저녁 처리
-  for i1,v1 in enumerate(ner_results):  # i1 : index / v1 : 배열
-    print('before ner[{}] result : {}'.format(i1, v1))
-    for i2, v2 in enumerate(v1): # i2 : index / v2 : tuple -> ner 배열을 순회
+  ##### DATE, TIME 처리
+  for i1, v1 in enumerate(ner_results):  ## i1 : index / v1 : 배열
+    # print('before ner[{}] result : {}'.format(i1, v1))
+    for i2, v2 in enumerate(v1): ## i2 : index / v2 : tuple -> ner 배열을 순회
+      # print('before ner[{}][{}] result : {}'.format(i1, i2, v2))
       if v2[1] == 'DATE' and re.search("(\d{1,2})(\s)?월(\s)?(\d{1,2})(\s)?일", v2[0]) == None:  # 잘못된 DATE
+        # print("잘못된 Date")
         ner_results[i1][i2] = (v2[0],'O')
-      if v2[1] == 'TIME':
-        if re.search("(\d{1,2})(\s)?시(\s)?(\d{1,2})?(\s)?(분|반)?", v2[0]):  #n시(n분/반) 형태가 있다
-          tuple_t = len(v2[0].lstrip().rstrip())
-          d = re.search("(\d{1,2})(\s)?시(\s)?(\d{1,2})?(\s)?(분|반)?", v2[0])
-          s, e = d.span()
-          reg_t = e-s+1
-          if tuple_t > reg_t :  #TIME에 n시(n분/반) 형태 말고 다른 값이 껴있음
-            t1 = (v2[0][:s], 'O')
-            t2 = (v2[0][s:], 'TIME')
-            ner_results[i1][i2] = t1
-            ner_results[i1].insert(i2+1,t2)
-            # if len(v2[0])-1 > e :
-            #   t2 = (v2[0][s:e+1], 'TIME')
-            #   t3 = (v2[0][e+1:], 'O')
-            #   ner_results[i1][i2] = t1
-            #   ner_results[i1].insert(i2+1,t2)
-            #   ner_results[i1].insert(i2+2,t3)
-            # else:
-            #   t2 = (v2[0][s:], 'TIME')
-            #   ner_results[i1][i2] = t1
-            #   ner_results[i1].insert(i2+1,t2)
-          else : #TIME에 맞는 형식 -> n시(n분/반) 형태
-            pass
-        else :  # 잘못된 형식의 TIME -> n시(n분/반) 형태가 아님
-          ner_results[i1][i2] = (v2[0],'O')
+      if v2[1] == 'TIME' and re.search("(\d{1,2})(\s)?시(\s)?(\d{1,2})?(\s)?(분|반)?", v2[0]):
+        # print("Time이 섞임")
+        #n시(n분/반) 형태가 있다
+        tuple_t = len(v2[0].lstrip().rstrip())
+        d = re.search("(\d{1,2})(\s)?시(\s)?(\d{1,2})?(\s)?(분|반)?", v2[0])
+        s, e = d.span()
+        reg_t = e-s+1
+        if tuple_t > reg_t :  #TIME에 n시(n분/반) 형태 외에 다른 값이 껴있음
+          t1 = (v2[0][:s], 'O')
+          t2 = (v2[0][s:e+1], 'TIME')
+          t3 = (v2[0][e+1:], 'O')
+          ner_results[i1][i2] = t1
+          ner_results[i1].insert(i2+1,t2)
+          if len(v2[0][e+1:]) > 0:
+            ner_results[i1].insert(i2+2,t3)
+        # else : #TIME에 맞는 형식 -> n시(n분/반) 형태
+        #   pass
+      elif v2[1] == 'TIME' and re.search("(\d{1,2})(\s)?시(\s)?(\d{1,2})?(\s)?(분|반)?", v2[0]) == None:  # 잘못된 형식의 TIME -> n시(n분/반) 형태가 아님
+        # print("Time이면 안되는데 time")
+        ner_results[i1][i2] = (v2[0],'O')
     t_list = [e[1] for e in v1]
-    if 'TIME' not in t_list:
+    # print('t_list : {}'.format(t_list))
+    t_count = t_list.count('TIME')
+    if t_count > 1 or (v1[-1][1] != 'TIME' and t_count == 1) :
+      t_idx_list = list(filter(lambda x: t_list[x] == 'TIME', range(len(t_list))))
+      for i in t_idx_list:
+        v1[i] = (v1[i][0], 'O')
       v1.append(('','TIME'))
-    print('after ner[{}] result : {}'.format(i1, v1))  
-  print('changed_ner_results : {}'.format(ner_results))
+    elif t_count == 0:
+      v1.append(('','TIME'))
+  #   print('after ner[{}] result : {}'.format(i1, v1))  
+  # print('changed_ner_results : {}'.format(ner_results))
 
   # ##### 아침, 점심, 저녁 처리
   # for i1,v1 in enumerate(ner_results):  # i1 : index / v1 : 배열
@@ -287,7 +239,7 @@ def doing_ner(input, date_list):
 
   #### ner 결과 1차원으로
   ner_results = [element for array in ner_results for element in array]
-  print('1D ner_results : {}'.format(ner_results))
+  # print('1D ner_results : {}'.format(ner_results))
   
   arranged_ner_results={}
   temp=""
@@ -297,22 +249,18 @@ def doing_ner(input, date_list):
     if result[1] == 'DATE': # 사진에 date가 있을 때
       # print(result)
       if date =='':
-        # m = result[0][result[0].find('월')-1]
-        # d = result[0][result[0].find('일')-1]
         temp_date = result[0].replace("일","")   #"일" 없애기
         temp_date = re.sub('월','.',temp_date)
-        temp_date = temp_date.replace(" ","") # 빈칸 없애기
+        temp_date = temp_date.replace(" ","").lstrip().rstrip() # 빈칸 없애기
         # print(temp_date)
         date = date_list[0]+'.'+temp_date # 처음 나온 date  ###### 월일 형식 동일형식 문자열로 변경 필요
         # date = result[0]
       else: # 처음 나온 date가 아님
         arranged_ner_results[date] = sche_results
         sche_results={}
-        # m = result[0][result[0].find('월')-1]
-        # d = result[0][result[0].find('일')-1]
         temp_date = result[0].replace("일","")   #"일" 없애기
         temp_date = re.sub('월','.',temp_date)
-        temp_date = temp_date.replace(" ","")  # 빈칸 없애기
+        temp_date = temp_date.replace(" ","").lstrip().rstrip()  # 빈칸 없애기
         # print(temp_date)
         date = date_list[0]+'.'+temp_date 
         # date = result[0]  ###### 월일 형식 동일형식 문자열로 변경 필요
@@ -322,15 +270,12 @@ def doing_ner(input, date_list):
       if result[1] == 'TIME':
         temp = temp.lstrip().rstrip()
         sche_results[temp] = result[0]
-        # print(temp)
-        # print(sche_results)
         temp=""
-      else :
-         temp+=result[0]
+      elif result[0] != ' ' :
+         temp+=' '+result[0]
         #  print(temp)
     arranged_ner_results[date] = sche_results
-  print('arranged_ner_results : {}'.format(arranged_ner_results))
-
+  # print('arranged_ner_results : {}'.format(arranged_ner_results))
   return arranged_ner_results  
 
 
@@ -346,30 +291,21 @@ def doing_zsl(arranged_ner_results, tags):
       zsl_results[sche] = sorted(zsl_result.items(),key=(lambda x:x[1]),reverse=True)[0][0]
       # print(zsl_results)
     zsled_results[date_box[0]] = zsl_results
-  print('zsled_results : {}'.format(zsled_results))
+  # print('zsled_results : {}'.format(zsled_results))
   return zsled_results
 
 ##### time 원본으로 돌리기
 def restoring_time(arranged_ner_results, time_list): 
   tdx = 0
   for idx1, (k1, v1) in enumerate(arranged_ner_results.items()): #k1 : 날짜 / v1 : 객체
-    print(idx1, k1, v1)
+    # print(idx1, k1, v1)
     for idx2, (k2, v2) in enumerate(v1.items()):  #k2: 일정 / v2 : 시간
-      print(idx2, k2, v2)
-      if v2 == '' or time_list[tdx] == '':
-        arranged_ner_results[k1][k2] = arranged_ner_results[k1][k2]+time_list[tdx]
+      # print(idx2, k2, v2)
+      if v2 == "" or time_list[tdx] == "":
+        arranged_ner_results[k1][k2] = arranged_ner_results[k1][k2]+""
       else :
         arranged_ner_results[k1][k2] = time_list[tdx]
       tdx = tdx+1
-  print('restoring time : {}'.format(arranged_ner_results))
-  # tdx = 0
-  # for idx1, (k1, v1) in enumerate(arranged_ner_results.items()): #k1 : 날짜 / v1 : 객체
-  #   print(idx1, k1, v1)
-  #   for idx2, (k2, v2) in enumerate(v1.items()):  #k2: 일정 / v2 : 시간
-  #     print(idx2, k2, v2)
-  #     if v2 is not '':
-  #       arranged_ner_results[k1][k2] = time_list[tdx]
-  #       tdx = tdx+1
   # print('restoring time : {}'.format(arranged_ner_results))
   return arranged_ner_results
 
@@ -401,31 +337,22 @@ def hello_world():
     collections = db.collection('UserList').document(_id).collection('TagHub')
     # print(collections) # CollectionReference
     for doc in collections.stream():
-        # print(doc)  # DocumentSnapshot Object
-        # print(u'{} => {} / {}'.format(doc.id, doc.get('color'), doc.get('name')))
-        # print(u'{} => {}'.format(doc.id, doc.to_dict()))
         name = doc.get('name')
         color = doc.get('color')
         tag_list.append(name)
         tag_info[name] = { "tagid" : doc.id, "tagcolor" : color}
     # print('tag_list : {}'.format(tag_list))
-    # print('tag_info : {}'.format(tag_info))
     
     ##### ocr 호출 #####
     ocr_result = get_ocr_data(_url)
-    # print('ocr_result : {}'.format(ocr_result))   #list
-    # ocr_result = ['졸작', '회의', '4:', '30', 'PM', '운동', '5pm']
-    # ocr_result = ['5/28', '회의', '10시', '병원', '2pm', '5/29', '수영', '4:30pm', '강의', '6시pm', '술약속', '9시']
-    # ocr_result = [['6/1', '병원', '9'], ['점심약속', '1pm'], [' 현충일', ' 저녁 6:30분PM '], ['1%', '어린이날', '휴가', '1%'], ['회의', '저녁 5시pm '], ['6/2', '운동', '3:30', 'pm'], ['수영', '8시'], ['술약속', '9pm']]
 
     ##### ocr 결과 전처리 
     spacing_result, time_list = spacing_data(ocr_result)
- 
+    # time_list = ["2시반 pm", "2시반", "10am", "2시 pm", "2시 30분am"]
 
-    # date_list = [str(year),str(month),str(day)]
-    # ner_result, zsl_result = doing_ner(ocr_result, tag_list, date_list)
     date_list = [str(year),str(month),str(day)]
     ##### ner
+    # ner_result = doing_ner("", date_list)
     ner_result = doing_ner(spacing_result, date_list)
     ##### zsl
     zsl_result = doing_zsl(ner_result, tag_list)
@@ -433,23 +360,27 @@ def hello_world():
     restored_time_result = restoring_time(ner_result, time_list)
 
     #####firebase에 write
-    for index, (key, value) in enumerate(restored_time_result.items()): #key는 date, value는 딕셔너리
+    for idx, (key, value) in enumerate(restored_time_result.items()): #key는 date, value는 딕셔너리
+      # print(key)
+      # print(type(key))
+      # print(value)
       doc_date = key
       # print(doc_date)
-      doc_date = doc_date.split(".")
+      doc_date = key.split(".")
       # print(doc_date)
       doc_year = int(doc_date[0])
       doc_month = int(doc_date[1])
       doc_day = int(doc_date[2])
-      for inindex, (inkey, invalue) in enumerate(value.items()) : #inkey는 일정, invalue는 시간
+      for inidx, (inkey, invalue) in enumerate(value.items()) : #inkey는 일정, invalue는 시간
         # print('{} : {}'.format(inkey, invalue))
         start = datetime.datetime(doc_year, doc_month, doc_day, 0, 0, 0) #시간 넣어주기
         end = datetime.datetime(doc_year, doc_month, doc_day, 23, 59, 59)
         max_tag = zsl_result[key][inkey] #최적 tag
+        total_title = inkey+' '+invalue
         doc = db.collection('UserList').document(_id).collection('ScheduleHub').document()
         doc.set({
             # u'title': inkey+' '+invalue,  # pororo결과 넣기..
-            u'title': inkey+' '+invalue,  # pororo결과 넣기..
+            u'title': total_title.lstrip().rstrip(),  # pororo결과 넣기..
             u'isAllDay' : True,
             u'tag' : {
                 u'color' : tag_info[max_tag]['tagcolor'],
@@ -467,15 +398,5 @@ def hello_world():
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
 
-
-
-    # collections = db.collection('UserList').document('5NxFVmOkPhPx62Y2Xl2xWDmpSoN2').collection('ScheduleHub')
-    # # print(collections) # CollectionReference
-    # for doc in collections.stream():
-    #     # print(doc)  # DocumentSnapshot Object
-    #     # tag = doc.get('tag')
-    #     # print(type(tag))
-    #     print(u'{} => {}'.format(doc.id, doc.to_dict()))
-    #     # print(f'Document data: {doc.get('start')}')
 
 
