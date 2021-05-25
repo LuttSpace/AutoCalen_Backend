@@ -1,5 +1,4 @@
 #-*- coding: utf-8 -*-
-
 import os
 import json
 import base64
@@ -87,9 +86,39 @@ def spacing_data(input) :
   time_list = []
   for i in range(len(input)):
     ##### spacing 말고 다른 방법
-    one_input = " ".join(input[i]) # 하나로 합치기
+    one_input = " ".join(input[i]) # 한줄 하나로 합치기
+
+    ##### 띄어진 n/m 붙이기
+    matchObj_iter = re.finditer('(\d{1,2})(\s)?(\s)?/(\s)?(\s)?(\d{1,2})', one_input)
+    # print(matchObj_iter)
+    d_list = []
+    for matchObj in matchObj_iter:
+      d_list.append(matchObj)
+    d_list.reverse()
+    # print(d_list)
+    for matchObj in d_list:
+      d = matchObj.group()
+      # print(d)
+      s = matchObj.start()
+      e = matchObj.end()
+      d = d.replace(" ","")
+      # print(d)
+      one_input = one_input[:s]+d+one_input[e:]
+      # print(one_input)
     ##### 월일 변경
+    # one_input = re.sub(r'(\d{1,2})/(\d{1,2})', '\\1월\\2일', one_input)
     one_input = re.sub(r'(\d{1,2})/(\d{1,2})', '\\1월\\2일', one_input)
+
+    ##### 기간인 경우 공백 없애기
+    dur_date = re.search('(\d{1,2})(\s)?(\s)?월(\s)?(\s)?(\d{1,2})(\s)?(\s)?일(\s)?(\s)?~(\s)?(\s)?(\d{1,2})(\s)?(\s)?월(\s)?(\s)?(\d{1,2})(\s)?(\s)?일', one_input)
+    # print(dur_date)
+    if dur_date is not None :
+      dur_g = dur_date.span()
+      dur_date = dur_date.group().replace(" ","")
+      # print('no blank date : {}'.format(dur_date))
+      one_input = dur_date+one_input[dur_g[1]:]
+    # print(one_input)
+
     ##### time 찾고 변경
     match_str1 = re.search("(\d{1,2})[\s]?시[\s]?(\d{1,2})[\s]?분[\s]?(am|pm|AM|PM)?",one_input)   #n시m분
     match_str2 = re.search("(\d{1,2})[\s]?시[\s]?반[\s]?(am|pm|AM|PM)?",one_input)  #n시반
@@ -187,11 +216,14 @@ def doing_ner(input, date_list):
         reg_t = e-s+1
         if tuple_t > reg_t :  #TIME에 n시(n분/반) 형태 외에 다른 값이 껴있음
           t1 = (v2[0][:s], 'O')
-          t2 = (v2[0][s:e+1], 'TIME')
-          t3 = (v2[0][e+1:], 'O')
+          t2 = (v2[0][s:e], 'TIME')
+          t3 = (v2[0][e:], 'O')
+          # t1 = (v2[0][:s], 'O')
+          # t2 = (v2[0][s:e+1], 'TIME')
+          # t3 = (v2[0][e+1:], 'O')
           ner_results[i1][i2] = t1
           ner_results[i1].insert(i2+1,t2)
-          if len(v2[0][e+1:]) > 0:
+          if len(v2[0][e:]) > 0:
             ner_results[i1].insert(i2+2,t3)
         # else : #TIME에 맞는 형식 -> n시(n분/반) 형태
         #   pass
@@ -211,36 +243,10 @@ def doing_ner(input, date_list):
   #   print('after ner[{}] result : {}'.format(i1, v1))  
   # print('changed_ner_results : {}'.format(ner_results))
 
-  # ##### 아침, 점심, 저녁 처리
-  # for i1,v1 in enumerate(ner_results):  # i1 : index / v1 : 배열
-  #   for i2, v2 in enumerate(v1): # i2 : index / v2 : tuple
-  #   # print(i)
-  #     if v2[1] == 'DATE' and re.search("(\d{1,2})(\s)?월(\s)?(\d{1,2})(\s)?일", v2[0]) == None:  # 잘못된 DATE
-  #       ner_results[i1][i2] = (v2[0],'O')
-  #     if re.search("(아침|점심|저녁)", v2[0]):
-  #       # print(v)
-  #       if re.search("(\d{1,2})(\s)?시(\s)?(\d{1,2})?(\s)?(분|반)?", v2[0]):
-  #         # print(ner_results[i])
-  #         d = re.search("(\d{1,2})(\s)?시(\s)?(\d{1,2})?(\s)?(분|반)?", v2[0])
-  #         # print(d.group())
-  #         ds = d.start()
-  #         t1 = (v2[0][:ds], 'O')
-  #         t2 = (v2[0][ds:], 'TIME')
-  #         ner_results[i1][i2] = t1
-  #         ner_results[i1].insert(i2+1,t2)
-  #       else :
-  #           ner_results[i1][i2] = (v2[0],'O')
-  #   t_list = [e[1] for e in v1]
-  #   if 'TIME' not in t_list:
-  #     v1.append(('','TIME'))
-  #   # print(ner_results)
-  #   # print(len(ner_results))
-  # print('changed_ner_results : {}'.format(ner_results))
-
   #### ner 결과 1차원으로
   ner_results = [element for array in ner_results for element in array]
   # print('1D ner_results : {}'.format(ner_results))
-  
+
   arranged_ner_results={}
   temp=""
   date=''
@@ -248,32 +254,78 @@ def doing_ner(input, date_list):
   for result in ner_results:  #result는 tuple
     if result[1] == 'DATE': # 사진에 date가 있을 때
       # print(result)
-      if date =='':
-        temp_date = result[0].replace("일","")   #"일" 없애기
-        temp_date = re.sub('월','.',temp_date)
-        temp_date = temp_date.replace(" ","").lstrip().rstrip() # 빈칸 없애기
-        # print(temp_date)
-        date = date_list[0]+'.'+temp_date # 처음 나온 date  ###### 월일 형식 동일형식 문자열로 변경 필요
-        # date = result[0]
-      else: # 처음 나온 date가 아님
-        arranged_ner_results[date] = sche_results
-        sche_results={}
-        temp_date = result[0].replace("일","")   #"일" 없애기
-        temp_date = re.sub('월','.',temp_date)
-        temp_date = temp_date.replace(" ","").lstrip().rstrip()  # 빈칸 없애기
-        # print(temp_date)
-        date = date_list[0]+'.'+temp_date 
-        # date = result[0]  ###### 월일 형식 동일형식 문자열로 변경 필요
+      if '~' in result[0] : #기간인 date
+        dur_idx = result[0].find('~')
+        if date =='': # 처음 나온 Date
+          if dur_idx != -1:
+            s = result[0][:dur_idx]
+            e = result[0][dur_idx+1:]
+            s_temp_date = s.replace("일","")   #"일" 없애기
+            s_temp_date = re.sub('월','.', s_temp_date)
+            s_temp_date = s_temp_date.replace(" ","").lstrip().rstrip() # 빈칸 없애기
+            e_temp_date = e.replace("일","")   #"일" 없애기
+            e_temp_date = re.sub('월','.', e_temp_date)
+            e_temp_date = e_temp_date.replace(" ","").lstrip().rstrip() # 빈칸 없애기
+
+            sdate = date_list[0]+'.'+s_temp_date # 처음 나온 date  ###### 월일 형식 동일형식 문자열로 변경 필요
+            edate = date_list[0]+'.'+e_temp_date 
+            date = (sdate, edate)
+
+        else: # 처음 나온 date가 아님
+          arranged_ner_results[date] = sche_results
+          sche_results={}
+
+          if dur_idx != -1:
+            s = result[0][:dur_idx]
+            e = result[0][dur_idx+1:]
+            s_temp_date = s.replace("일","")   #"일" 없애기
+            s_temp_date = re.sub('월','.', s_temp_date)
+            s_temp_date = s_temp_date.replace(" ","").lstrip().rstrip() # 빈칸 없애기
+            e_temp_date = e.replace("일","")   #"일" 없애기
+            e_temp_date = re.sub('월','.', e_temp_date)
+            e_temp_date = e_temp_date.replace(" ","").lstrip().rstrip() # 빈칸 없애기
+
+            sdate = date_list[0]+'.'+s_temp_date # 처음 나온 date  ###### 월일 형식 동일형식 문자열로 변경 필요
+            edate = date_list[0]+'.'+e_temp_date 
+            date = (sdate, edate)
+
+      else : #기간인 Date가 아님
+        if date =='':
+          temp_date = result[0].replace("일","")   #"일" 없애기
+          temp_date = re.sub('월','.',temp_date)
+          temp_date = temp_date.replace(" ","").lstrip().rstrip() # 빈칸 없애기
+          # print(temp_date)
+          s_date = date_list[0]+'.'+temp_date # 처음 나온 date  ###### 월일 형식 동일형식 문자열로 변경 필요
+          e_date = s_date
+          date = (s_date, e_date)
+          # date = result[0]
+        else: # 처음 나온 date가 아님
+          arranged_ner_results[date] = sche_results
+          sche_results={}
+          temp_date = result[0].replace("일","")   #"일" 없애기
+          temp_date = re.sub('월','.',temp_date)
+          temp_date = temp_date.replace(" ","").lstrip().rstrip()  # 빈칸 없애기
+          # print(temp_date)
+          s_date = date_list[0]+'.'+temp_date 
+          e_date = s_date
+          date = (s_date, e_date)
+          # date = result[0]  ###### 월일 형식 동일형식 문자열로 변경 필요
     else: # 해당 단어가 date가 아님
       # print(result)
-      if date=='': date = _date # 사진에 date가 없을 때
+      if date=='': 
+        s_date = _date # 사진에 date가 없을 때
+        e_date = _date
+        date = (s_date, e_date)
       if result[1] == 'TIME':
         temp = temp.lstrip().rstrip()
         sche_results[temp] = result[0]
         temp=""
-      elif result[0] != ' ' :
-         temp+=' '+result[0]
+      else:
+        temp = temp+result[0]
         #  print(temp)
+      # elif result[0] != ' ' :
+      #    temp+=' '+result[0]
+      #   #  print(temp)
     arranged_ner_results[date] = sche_results
   # print('arranged_ner_results : {}'.format(arranged_ner_results))
   return arranged_ner_results  
@@ -360,21 +412,27 @@ def hello_world():
     restored_time_result = restoring_time(ner_result, time_list)
 
     #####firebase에 write
-    for idx, (key, value) in enumerate(restored_time_result.items()): #key는 date, value는 딕셔너리
-      # print(key)
-      # print(type(key))
-      # print(value)
-      doc_date = key
-      # print(doc_date)
-      doc_date = key.split(".")
-      # print(doc_date)
-      doc_year = int(doc_date[0])
-      doc_month = int(doc_date[1])
-      doc_day = int(doc_date[2])
+    for idx, (key, value) in enumerate(restored_time_result.items()): #key는 date, value는 딕셔너리      
+      start_date = key[0]
+      end_date = key[1]
+      # print(start_date)
+      # print(end_date)
+      start_date = start_date.split(".")
+      # print(start_date)
+      start_year = int(start_date[0])
+      start_month = int(start_date[1])
+      start_day = int(start_date[2])
+
+      end_date = end_date.split(".")
+      # print(end_date)
+      end_year = int(end_date[0])
+      end_month = int(end_date[1])
+      end_day = int(end_date[2])
+
       for inidx, (inkey, invalue) in enumerate(value.items()) : #inkey는 일정, invalue는 시간
         # print('{} : {}'.format(inkey, invalue))
-        start = datetime.datetime(doc_year, doc_month, doc_day, 0, 0, 0) #시간 넣어주기
-        end = datetime.datetime(doc_year, doc_month, doc_day, 23, 59, 59)
+        start = datetime.datetime(start_year, start_month, start_day, 0, 0, 0) #시간 넣어주기
+        end = datetime.datetime(end_year, end_month, end_day, 23, 59, 59)
         max_tag = zsl_result[key][inkey] #최적 tag
         total_title = inkey+' '+invalue
         doc = db.collection('UserList').document(_id).collection('ScheduleHub').document()
