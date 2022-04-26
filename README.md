@@ -1,7 +1,5 @@
 # 오또칼렌 | Autocalen
 #### Backend Repository
-<br/>
-
 ## 소개
 >**오또칼렌 : Otto(Auto) Calen**
 ```바쁜 현대인들을 위한 일정 정리 자동화 솔루션!
@@ -14,6 +12,14 @@
 
 작품명 오또칼렌은 "Automatic"과 "Calendar"를 합친 것을 한글로 발음하여 표기했습니다.
 ```
+<br/>
+
+## Tech Stack
+1. Navor Cloud Platform CLOVA OCR
+2. Pororo 
+3. Flask
+4. Firebase
+5. Docker
 <br/>
 
 ## 주요 기능
@@ -29,14 +35,6 @@
 1. 추출된 일정 문자열의 태그화(카테고리화)를 위해 날짜/일정/시간으로 분류 필요
 2. 날짜/일정/시간 파악을 위해 자연어처리 프레임워크 [Pororo](https://github.com/kakaobrain/pororo) 사용
 <br/>
-
-## Tech Stack
-1. Navor Cloud Platform CLOVA OCR
-2. Pororo 
-3. Flask
-4. Firebase
-5. Docker
-<bt/>
 
 ## Video
 [소개 영상](https://www.youtube.com/watch?v=4prgEn_bIYg)
