@@ -39,6 +39,6 @@
 <bt/>
 
 ## Video
-https://www.youtube.com/watch?v=4prgEn_bIYg
+[소개 영상](https://www.youtube.com/watch?v=4prgEn_bIYg)
 
 
