@@ -16,7 +16,7 @@
 
 ## Tech Stack
 1. Navor Cloud Platform CLOVA OCR
-2. Pororo 
+2. Pororo : Platform Of neuRal mOdels for natuRal language prOcessing
 3. Flask
 4. Firebase
 5. Docker
